@@ -151,7 +151,8 @@ def check_updates():
                         if data_val == "photos_done":
                             if chat_id in user_sessions and len(user_sessions[chat_id]["photos"]) > 0:
                                 user_states[chat_id] = "WAITING_PROMPTS"
-                                send_message(chat_id, "✍️ *2. Adım:* Sırayla üretilmesini istediğin promptları yaz.\n\nBirden fazla video istiyorsan her birini alt alta yeni satıra yazabilirsin:")
+                                adet = len(user_sessions[chat_id]["photos"])
+                                send_message(chat_id, f"✅ *{adet} fotoğraf başarıyla işleme alındı.*\n\n✍️ *2. Adım:* Sırayla üretilmesini istediğin promptları yaz (Birden fazla ise alt alta yaz):")
                             else:
                                 send_message(chat_id, "⚠️ Lütfen önce en az 1 adet fotoğraf gönder.")
                         
@@ -206,13 +207,12 @@ def check_updates():
                         user_states[chat_id] = "WAITING_PHOTO"
                         user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
                         
-                        # Tek bir başlangıç mesajı ve fotoğraf bitti butonu
                         keyboard = {
                             "inline_keyboard": [
                                 [{"text": "✅ Fotoğraflar Tamam, Devam Et ➡️", "callback_data": "photos_done"}]
                             ]
                         }
-                        send_message(chat_id, "🎬 *Benzero AI Video Botuna Hoş Geldin!*\n\n📸 *1. Adım:* Referans fotoğraflarını **toplu olarak** (hepsini birden seçip) gönder.\n\nFotoğraflar yüklenince aşağıdaki butona tıkla:", reply_markup=keyboard)
+                        send_message(chat_id, "🎬 *Benzero AI Video Botuna Hoş Geldin!*\n\n📸 *1. Adım:* Referans fotoğraflarını **toplu olarak** gönder.\n\nTüm fotoğraflar yüklenince yukarıdaki **Fotoğraflar Tamam** butonuna tıkla:", reply_markup=keyboard)
                         continue
                         
                     current_state = user_states.get(chat_id, "NONE")
@@ -234,8 +234,7 @@ def check_updates():
                             
                             if photo_url not in user_sessions[chat_id]["photos"]:
                                 user_sessions[chat_id]["photos"].append(photo_url)
-                                adet = len(user_sessions[chat_id]["photos"])
-                                print(f"Fotoğraf eklendi. Toplam: {adet}")
+                                # Burada artık hiçbir mesaj atmıyoruz, ekran tamamen temiz kalıyor.
 
                     elif current_state == "WAITING_PROMPTS":
                         lines = [line.strip() for line in text.split("\n") if line.strip()]
