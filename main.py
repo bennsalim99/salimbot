@@ -51,14 +51,16 @@ def generate_video(session, prompt_text):
     images_base64 = []
     for photo_url in session['photos']:
         try:
+            print(f"Fotoğraf indiriliyor: {photo_url}")
             img_data = requests.get(photo_url, timeout=15).content
             import base64
             b64 = "data:image/jpeg;base64," + base64.b64encode(img_data).decode("utf-8")
             images_base64.append(b64)
         except Exception as e:
-            print("Görsel indirme hatası:", e)
+            print("Görsel indirme hatası (Detay):", e)
 
     if not images_base64:
+        print("HATA: Hiçbir fotoğraf indirilemedi!")
         return None
 
     payload = {
@@ -66,7 +68,7 @@ def generate_video(session, prompt_text):
         "prompt": prompt_text,
         "negative_prompt": session.get('neg_prompt', ''),
         "mode": "reference",
-        "seconds": session.get('seconds', '8'),
+        "seconds": str(session.get('seconds', '8')),
         "size": "720P",
         "aspect_ratio": session.get('aspect', '9:16'),
         "images": images_base64,
@@ -80,15 +82,16 @@ def generate_video(session, prompt_text):
     }
 
     try:
+        print("Agnes API'ye istek gönderiliyor...")
         res = requests.post("https://apihub.agnes-ai.com/v1/videos", json=payload, headers=headers, timeout=20)
         print("--- AGNES API YANITI ---")
-        print("Status:", res.status_code)
-        print("Body:", res.text)
+        print("Status Code:", res.status_code)
+        print("Response Body:", res.text)
         
         data = res.json()
         return data.get("video_id") or data.get("id")
     except Exception as e:
-        print("API istek hatası:", e)
+        print("API istek hatası (Detay):", e)
         return None
 
 def poll_agnes(video_id):
@@ -102,10 +105,12 @@ def poll_agnes(video_id):
         try:
             res = requests.get(f"https://apihub.agnes-ai.com/agnesapi?video_id={video_id}&model_name=agnes-video-2.5-flash", headers=headers, timeout=15)
             data = res.json()
+            print("Poll yanıtı:", data)
             video_url = data.get("video_url") or data.get("url") or data.get("video")
             if video_url:
                 return video_url
-        except:
+        except Exception as e:
+            print("Poll hata:", e)
             continue
     return None
 
@@ -127,7 +132,7 @@ def process_queue(chat_id, session):
             else:
                 send_message(chat_id, f"❌ *[{index}/{total}]* Video zaman aşımına uğradı.")
         else:
-            send_message(chat_id, f"❌ *[{index}/{total}]* Agnes AI isteği kabul etmedi. (Render Logs ekranından detaya bakabilirsin)")
+            send_message(chat_id, f"❌ *[{index}/{total}]* Agnes AI isteği kabul etmedi. Logları kontrol edin.")
             
         if index < total:
             send_message(chat_id, "⏱️ Bir sonraki prompt için 1 dakika bekleniyor...")
