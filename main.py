@@ -114,7 +114,7 @@ def process_queue(chat_id, session):
     total = len(prompts)
     
     for index, prompt_text in enumerate(prompts, 1):
-        send_message(chat_id, f"⏳ *[{index}/{total}]* Video üretimi başlatıldı...\nPrompt: _{prompt_text}_")
+        send_message(chat_id, f"⏳ *[{index}/{total}]* Video üretimi başlatıldı...\nPrompt: _{prompt_text[:100]}..._")
         
         video_id, error_detail = generate_video(session, prompt_text)
         if video_id:
@@ -133,7 +133,7 @@ def process_queue(chat_id, session):
             send_message(chat_id, "⏱️ Bir sonraki prompt için 1 dakika bekleniyor...")
             time.sleep(60)
             
-    send_message(chat_id, "🎉 *Tüm liste tamamlandı!* Yeni işlem için /start yazabilirsin.")
+    send_message(chat_id, "🎉 *Tüm işlem tamamlandı!* Yeni video için /start yazabilirsin.")
 
 def check_updates():
     offset = 0
@@ -158,7 +158,7 @@ def check_updates():
                         if data_val == "photos_done":
                             if len(user_sessions[chat_id]["photos"]) > 0:
                                 user_states[chat_id] = "WAITING_PROMPTS"
-                                send_message(chat_id, "✍️ *2. Adım:* Sırayla üretilmesini istediğin promptları yaz (Birden fazla ise alt alta yaz):")
+                                send_message(chat_id, "✍️ *2. Adım:* Üretilmesini istediğin detaylı promptu yaz:")
                             else:
                                 send_message(chat_id, "⚠️ Lütfen önce en az 1 adet fotoğraf gönder.")
                         
@@ -178,7 +178,7 @@ def check_updates():
                             asp = data_val.replace("asp_", "")
                             user_sessions[chat_id]["aspect"] = asp
                             user_states[chat_id] = "PROCESSING"
-                            send_message(chat_id, "🚀 *Tüm ayarlar kaydedildi!* Videolar sırayla üretilmeye başlanıyor...")
+                            send_message(chat_id, "🚀 *Tüm ayarlar kaydedildi!* Video üretilmeye başlanıyor...")
                             
                             session = user_sessions[chat_id]
                             t_q = Thread(target=process_queue, args=(chat_id, session))
@@ -232,11 +232,10 @@ def check_updates():
                                 user_sessions[chat_id]["photos"].append(photo_url)
 
                     elif current_state == "WAITING_PROMPTS":
-                        lines = [line.strip() for line in text.split("\n") if line.strip()]
-                        if lines:
+                        if text:
                             if chat_id not in user_sessions:
                                 user_sessions[chat_id] = {"photos": [], "prompts": [], "seconds": "8", "aspect": "9:16"}
-                            user_sessions[chat_id]["prompts"] = lines
+                            user_sessions[chat_id]["prompts"] = [text]
                             user_states[chat_id] = "WAITING_SECONDS"
                             keyboard = {
                                 "inline_keyboard": [
@@ -244,9 +243,9 @@ def check_updates():
                                     [{"text": "10 sn", "callback_data": "sec_10"}, {"text": "12 sn", "callback_data": "sec_12"}, {"text": "18 sn", "callback_data": "sec_18"}]
                                 ]
                             }
-                            send_message(chat_id, f"✅ *{len(lines)} adet prompt kaydedildi.*\n\n⏱️ *3. Adım:* Video süresini seç:", reply_markup=keyboard)
+                            send_message(chat_id, f"✅ *Prompt başarıyla kaydedildi.*\n\n⏱️ *3. Adım:* Video süresini seç:", reply_markup=keyboard)
                         else:
-                            send_message(chat_id, "⚠️ Lütfen en az bir prompt yaz.")
+                            send_message(chat_id, "⚠️ Lütfen geçerli bir prompt yaz.")
 
         except Exception as e:
             print("Hata:", e)
