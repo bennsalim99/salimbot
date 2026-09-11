@@ -148,52 +148,51 @@ def check_updates():
                         chat_id = cq["message"]["chat"]["id"]
                         data_val = cq["data"]
                         
+                        if chat_id not in user_sessions:
+                            user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
+
                         if data_val == "photos_done":
-                            if chat_id in user_sessions and len(user_sessions[chat_id]["photos"]) > 0:
+                            if len(user_sessions[chat_id]["photos"]) > 0:
                                 user_states[chat_id] = "WAITING_PROMPTS"
-                                adet = len(user_sessions[chat_id]["photos"])
-                                send_message(chat_id, f"✅ *{adet} fotoğraf başarıyla işleme alındı.*\n\n✍️ *2. Adım:* Sırayla üretilmesini istediğin promptları yaz (Birden fazla ise alt alta yaz):")
+                                send_message(chat_id, "✍️ *2. Adım:* Sırayla üretilmesini istediğin promptları yaz (Birden fazla ise alt alta yaz):")
                             else:
                                 send_message(chat_id, "⚠️ Lütfen önce en az 1 adet fotoğraf gönder.")
                         
                         elif data_val == "skip_neg":
-                            if chat_id in user_sessions:
-                                user_sessions[chat_id]["neg_prompt"] = ""
-                                user_states[chat_id] = "WAITING_SECONDS"
-                                keyboard = {
-                                    "inline_keyboard": [
-                                        [{"text": "4 sn", "callback_data": "sec_4"}, {"text": "5 sn", "callback_data": "sec_5"}, {"text": "8 sn", "callback_data": "sec_8"}],
-                                        [{"text": "10 sn", "callback_data": "sec_10"}, {"text": "12 sn", "callback_data": "sec_12"}, {"text": "18 sn", "callback_data": "sec_18"}]
-                                    ]
-                                }
-                                send_message(chat_id, "⏱️ *4. Adım:* Video süresini seç:", reply_markup=keyboard)
+                            user_sessions[chat_id]["neg_prompt"] = ""
+                            user_states[chat_id] = "WAITING_SECONDS"
+                            keyboard = {
+                                "inline_keyboard": [
+                                    [{"text": "4 sn", "callback_data": "sec_4"}, {"text": "5 sn", "callback_data": "sec_5"}, {"text": "8 sn", "callback_data": "sec_8"}],
+                                    [{"text": "10 sn", "callback_data": "sec_10"}, {"text": "12 sn", "callback_data": "sec_12"}, {"text": "18 sn", "callback_data": "sec_18"}]
+                                ]
+                            }
+                            send_message(chat_id, "⏱️ *4. Adım:* Video süresini seç:", reply_markup=keyboard)
 
                         elif data_val.startswith("sec_"):
                             sec = data_val.replace("sec_", "")
-                            if chat_id in user_sessions:
-                                user_sessions[chat_id]["seconds"] = sec
-                                user_states[chat_id] = "WAITING_ASPECT"
-                                keyboard = {
-                                    "inline_keyboard": [
-                                        [{"text": "📱 9:16 Dikey", "callback_data": "asp_9:16"}, {"text": "💻 16:9 Yatay", "callback_data": "asp_16:9"}],
-                                        [{"text": "⏹️ 1:1 Kare", "callback_data": "asp_1:1"}]
-                                    ]
-                                }
-                                send_message(chat_id, f"✅ Süre: *{sec} saniye*\n\n📐 *5. Adım:* En / Boy oranını seç:", reply_markup=keyboard)
+                            user_sessions[chat_id]["seconds"] = sec
+                            user_states[chat_id] = "WAITING_ASPECT"
+                            keyboard = {
+                                "inline_keyboard": [
+                                    [{"text": "📱 9:16 Dikey", "callback_data": "asp_9:16"}, {"text": "💻 16:9 Yatay", "callback_data": "asp_16:9"}],
+                                    [{"text": "⏹️ 1:1 Kare", "callback_data": "asp_1:1"}]
+                                ]
+                            }
+                            send_message(chat_id, f"✅ Süre: *{sec} saniye*\n\n📐 *5. Adım:* En / Boy oranını seç:", reply_markup=keyboard)
 
                         elif data_val.startswith("asp_"):
                             asp = data_val.replace("asp_", "")
-                            if chat_id in user_sessions:
-                                user_sessions[chat_id]["aspect"] = asp
-                                user_states[chat_id] = "PROCESSING"
-                                send_message(chat_id, "🚀 *Tüm ayarlar kaydedildi!* Videolar sırayla üretilmeye başlanıyor...")
-                                
-                                session = user_sessions[chat_id]
-                                t_q = Thread(target=process_queue, args=(chat_id, session))
-                                t_q.start()
-                                
-                                user_states.pop(chat_id, None)
-                                user_sessions.pop(chat_id, None)
+                            user_sessions[chat_id]["aspect"] = asp
+                            user_states[chat_id] = "PROCESSING"
+                            send_message(chat_id, "🚀 *Tüm ayarlar kaydedildi!* Videolar sırayla üretilmeye başlanıyor...")
+                            
+                            session = user_sessions[chat_id]
+                            t_q = Thread(target=process_queue, args=(chat_id, session))
+                            t_q.start()
+                            
+                            user_states.pop(chat_id, None)
+                            user_sessions.pop(chat_id, None)
                         continue
 
                     message = result.get("message", {})
@@ -217,6 +216,11 @@ def check_updates():
                         
                     current_state = user_states.get(chat_id, "NONE")
                     
+                    # Eğer kullanıcı hafızada yoksa ama yazı yazdıysa baştan başlatmasını söyleyelim
+                    if current_state == "NONE":
+                        send_message(chat_id, "⚠️ Oturumunuz zaman aşımına uğradı veya bot yeniden başladı. Lütfen yeniden başlamak için **/start** yazın.")
+                        continue
+
                     if current_state == "WAITING_PHOTO":
                         file_id = None
                         if "photo" in message:
@@ -225,20 +229,21 @@ def check_updates():
                             file_id = message["document"]["file_id"]
 
                         if file_id:
+                            if chat_id not in user_sessions:
+                                user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
+                            
                             file_res = requests.get(f"{BASE_URL}/getFile?file_id={file_id}").json()
                             file_path = file_res["result"]["file_path"]
                             photo_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
                             
-                            if chat_id not in user_sessions:
-                                user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
-                            
                             if photo_url not in user_sessions[chat_id]["photos"]:
                                 user_sessions[chat_id]["photos"].append(photo_url)
-                                # Burada artık hiçbir mesaj atmıyoruz, ekran tamamen temiz kalıyor.
 
                     elif current_state == "WAITING_PROMPTS":
                         lines = [line.strip() for line in text.split("\n") if line.strip()]
                         if lines:
+                            if chat_id not in user_sessions:
+                                user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
                             user_sessions[chat_id]["prompts"] = lines
                             user_states[chat_id] = "WAITING_NEG_PROMPT"
                             keyboard = {
@@ -251,6 +256,8 @@ def check_updates():
                             send_message(chat_id, "⚠️ Lütfen en az bir prompt yaz.")
 
                     elif current_state == "WAITING_NEG_PROMPT":
+                        if chat_id not in user_sessions:
+                            user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
                         user_sessions[chat_id]["neg_prompt"] = text
                         user_states[chat_id] = "WAITING_SECONDS"
                         keyboard = {
