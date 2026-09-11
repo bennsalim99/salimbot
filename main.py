@@ -8,7 +8,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot aktif ve calisiyor!"
+    return "Bot aktif and calisiyor!"
 
 def run_web():
     port = int(os.environ.get('PORT', 10000))
@@ -16,7 +16,6 @@ def run_web():
 
 BOT_TOKEN = "8951343304:AAEEhyKFAPlFhJg9pp6AUsoM1EUnvKZoNNM"
 AGNES_API_KEY = "sk-mzWSliOu65udCf0Wgwr06GK3Koa9cLHTPJnEASpANeEUP79U"
-CHAT_ID = "-1004430603244"
 
 BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
@@ -36,16 +35,16 @@ def send_message(chat_id, text, reply_markup=None):
     except Exception as e:
         print("Mesaj gönderme hatası:", e)
 
-def send_video_to_channel(video_url, video_id, prompt_text=""):
+def send_video_to_user(chat_id, video_url, video_id, prompt_text=""):
     text = f"🎬 *Yeni Video Hazır!*\n\n📝 *Prompt:* {prompt_text}\n\n🆔 *Video ID:* `{video_id}`\n\n⬇️ *İzle / İndir:*\n{video_url}"
     try:
         requests.post(f"{BASE_URL}/sendMessage", json={
-            "chat_id": CHAT_ID,
+            "chat_id": chat_id,
             "text": text,
             "parse_mode": "Markdown"
         }, timeout=10)
     except Exception as e:
-        print("Kanal mesajı hatası:", e)
+        print("Kullanıcı mesajı hatası:", e)
 
 def generate_video(session, prompt_text):
     images_base64 = []
@@ -124,8 +123,8 @@ def process_queue(chat_id, session):
             video_url = poll_agnes(video_id)
             
             if video_url:
-                send_message(chat_id, f"✅ *[{index}/{total}]* Video hazır ve kanala yollandı!")
-                send_video_to_channel(video_url, video_id, prompt_text)
+                send_message(chat_id, f"✅ *[{index}/{total}]* Video hazır!")
+                send_video_to_user(chat_id, video_url, video_id, prompt_text)
             else:
                 send_message(chat_id, f"❌ *[{index}/{total}]* Video zaman aşımına uğradı.")
         else:
