@@ -64,7 +64,6 @@ def generate_video(session, prompt_text):
     payload = {
         "model": "agnes-video-2.5-flash",
         "prompt": prompt_text,
-        "negative_prompt": session.get('neg_prompt', ''),
         "mode": "reference",
         "seconds": str(session.get('seconds', '8')),
         "size": "720P",
@@ -156,7 +155,7 @@ def check_updates():
                         data_val = cq["data"]
                         
                         if chat_id not in user_sessions:
-                            user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
+                            user_sessions[chat_id] = {"photos": [], "prompts": [], "seconds": "8", "aspect": "9:16"}
 
                         if data_val == "photos_done":
                             if len(user_sessions[chat_id]["photos"]) > 0:
@@ -165,17 +164,6 @@ def check_updates():
                             else:
                                 send_message(chat_id, "⚠️ Lütfen önce en az 1 adet fotoğraf gönder.")
                         
-                        elif data_val == "skip_neg":
-                            user_sessions[chat_id]["neg_prompt"] = ""
-                            user_states[chat_id] = "WAITING_SECONDS"
-                            keyboard = {
-                                "inline_keyboard": [
-                                    [{"text": "4 sn", "callback_data": "sec_4"}, {"text": "5 sn", "callback_data": "sec_5"}, {"text": "8 sn", "callback_data": "sec_8"}],
-                                    [{"text": "10 sn", "callback_data": "sec_10"}, {"text": "12 sn", "callback_data": "sec_12"}, {"text": "18 sn", "callback_data": "sec_18"}]
-                                ]
-                            }
-                            send_message(chat_id, "⏱️ *4. Adım:* Video süresini seç:", reply_markup=keyboard)
-
                         elif data_val.startswith("sec_"):
                             sec = data_val.replace("sec_", "")
                             user_sessions[chat_id]["seconds"] = sec
@@ -186,7 +174,7 @@ def check_updates():
                                     [{"text": "⏹️ 1:1 Kare", "callback_data": "asp_1:1"}]
                                 ]
                             }
-                            send_message(chat_id, f"✅ Süre: *{sec} saniye*\n\n📐 *5. Adım:* En / Boy oranını seç:", reply_markup=keyboard)
+                            send_message(chat_id, f"✅ Süre: *{sec} saniye*\n\n📐 *3. Adım:* En / Boy oranını seç:", reply_markup=keyboard)
 
                         elif data_val.startswith("asp_"):
                             asp = data_val.replace("asp_", "")
@@ -211,7 +199,7 @@ def check_updates():
                     
                     if text == "/start":
                         user_states[chat_id] = "WAITING_PHOTO"
-                        user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
+                        user_sessions[chat_id] = {"photos": [], "prompts": [], "seconds": "8", "aspect": "9:16"}
                         
                         keyboard = {
                             "inline_keyboard": [
@@ -236,7 +224,7 @@ def check_updates():
 
                         if file_id:
                             if chat_id not in user_sessions:
-                                user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
+                                user_sessions[chat_id] = {"photos": [], "prompts": [], "seconds": "8", "aspect": "9:16"}
                             
                             file_res = requests.get(f"{BASE_URL}/getFile?file_id={file_id}").json()
                             file_path = file_res["result"]["file_path"]
@@ -249,30 +237,18 @@ def check_updates():
                         lines = [line.strip() for line in text.split("\n") if line.strip()]
                         if lines:
                             if chat_id not in user_sessions:
-                                user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
+                                user_sessions[chat_id] = {"photos": [], "prompts": [], "seconds": "8", "aspect": "9:16"}
                             user_sessions[chat_id]["prompts"] = lines
-                            user_states[chat_id] = "WAITING_NEG_PROMPT"
+                            user_states[chat_id] = "WAITING_SECONDS"
                             keyboard = {
                                 "inline_keyboard": [
-                                    [{"text": "⏩ İstemiyorum / Geç", "callback_data": "skip_neg"}]
+                                    [{"text": "4 sn", "callback_data": "sec_4"}, {"text": "5 sn", "callback_data": "sec_5"}, {"text": "8 sn", "callback_data": "sec_8"}],
+                                    [{"text": "10 sn", "callback_data": "sec_10"}, {"text": "12 sn", "callback_data": "sec_12"}, {"text": "18 sn", "callback_data": "sec_18"}]
                                 ]
                             }
-                            send_message(chat_id, f"✅ *{len(lines)} adet prompt kaydedildi.*\n\n🚫 *3. Adım:* Varsa **Negative Prompt** yaz veya butona basarak geç:", reply_markup=keyboard)
+                            send_message(chat_id, f"✅ *{len(lines)} adet prompt kaydedildi.*\n\n⏱️ *3. Adım:* Video süresini seç:", reply_markup=keyboard)
                         else:
                             send_message(chat_id, "⚠️ Lütfen en az bir prompt yaz.")
-
-                    elif current_state == "WAITING_NEG_PROMPT":
-                        if chat_id not in user_sessions:
-                            user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
-                        user_sessions[chat_id]["neg_prompt"] = text
-                        user_states[chat_id] = "WAITING_SECONDS"
-                        keyboard = {
-                            "inline_keyboard": [
-                                [{"text": "4 sn", "callback_data": "sec_4"}, {"text": "5 sn", "callback_data": "sec_5"}, {"text": "8 sn", "callback_data": "sec_8"}],
-                                [{"text": "10 sn", "callback_data": "sec_10"}, {"text": "12 sn", "callback_data": "sec_12"}, {"text": "18 sn", "callback_data": "sec_18"}]
-                            ]
-                        }
-                        send_message(chat_id, "⏱️ *4. Adım:* Video süresini seç:", reply_markup=keyboard)
 
         except Exception as e:
             print("Hata:", e)
