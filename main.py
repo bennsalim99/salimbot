@@ -241,7 +241,7 @@ def check_updates():
                             user_sessions[chat_id]["prompts"] = lines
                             user_states[chat_id] = "WAITING_SECONDS"
                             keyboard = {
-                                "inline_keyword": [
+                                "inline_keyboard": [
                                     [{"text": "4 sn", "callback_data": "sec_4"}, {"text": "5 sn", "callback_data": "sec_5"}, {"text": "8 sn", "callback_data": "sec_8"}],
                                     [{"text": "10 sn", "callback_data": "sec_10"}, {"text": "12 sn", "callback_data": "sec_12"}, {"text": "18 sn", "callback_data": "sec_18"}]
                                 ]
