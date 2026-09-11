@@ -31,23 +31,35 @@ def send_message(chat_id, text, reply_markup=None):
     }
     if reply_markup:
         payload["reply_markup"] = reply_markup
-    requests.post(f"{BASE_URL}/sendMessage", json=payload)
+    try:
+        requests.post(f"{BASE_URL}/sendMessage", json=payload, timeout=10)
+    except Exception as e:
+        print("Mesaj gönderme hatası:", e)
 
 def send_video_to_channel(video_url, video_id, prompt_text=""):
     text = f"🎬 *Yeni Video Hazır!*\n\n📝 *Prompt:* {prompt_text}\n\n🆔 *Video ID:* `{video_id}`\n\n⬇️ *İzle / İndir:*\n{video_url}"
-    requests.post(f"{BASE_URL}/sendMessage", json={
-        "chat_id": CHAT_ID,
-        "text": text,
-        "parse_mode": "Markdown"
-    })
+    try:
+        requests.post(f"{BASE_URL}/sendMessage", json={
+            "chat_id": CHAT_ID,
+            "text": text,
+            "parse_mode": "Markdown"
+        }, timeout=10)
+    except Exception as e:
+        print("Kanal mesajı hatası:", e)
 
 def generate_video(session, prompt_text):
     images_base64 = []
     for photo_url in session['photos']:
-        img_data = requests.get(photo_url).content
-        import base64
-        b64 = "data:image/jpeg;base64," + base64.b64encode(img_data).decode("utf-8")
-        images_base64.append(b64)
+        try:
+            img_data = requests.get(photo_url, timeout=15).content
+            import base64
+            b64 = "data:image/jpeg;base64," + base64.b64encode(img_data).decode("utf-8")
+            images_base64.append(b64)
+        except Exception as e:
+            print("Görsel indirme hatası:", e)
+
+    if not images_base64:
+        return None
 
     payload = {
         "model": "agnes-video-2.5-flash",
@@ -68,10 +80,11 @@ def generate_video(session, prompt_text):
     }
 
     try:
-        res = requests.post("https://apihub.agnes-ai.com/v1/videos", json=payload, headers=headers)
+        res = requests.post("https://apihub.agnes-ai.com/v1/videos", json=payload, headers=headers, timeout=20)
         data = res.json()
         return data.get("video_id") or data.get("id")
-    except:
+    except Exception as e:
+        print("API istek hatası:", e)
         return None
 
 def poll_agnes(video_id):
@@ -83,7 +96,7 @@ def poll_agnes(video_id):
     for _ in range(60):
         time.sleep(5)
         try:
-            res = requests.get(f"https://apihub.agnes-ai.com/agnesapi?video_id={video_id}&model_name=agnes-video-2.5-flash", headers=headers)
+            res = requests.get(f"https://apihub.agnes-ai.com/agnesapi?video_id={video_id}&model_name=agnes-video-2.5-flash", headers=headers, timeout=15)
             data = res.json()
             video_url = data.get("video_url") or data.get("url") or data.get("video")
             if video_url:
@@ -123,7 +136,7 @@ def check_updates():
     print("Bot dinlemeye basladi...")
     while True:
         try:
-            res = requests.get(f"{BASE_URL}/getUpdates", params={"offset": offset, "timeout": 30})
+            res = requests.get(f"{BASE_URL}/getUpdates", params={"offset": offset, "timeout": 30}, timeout=40)
             data = res.json()
             
             if data.get("ok"):
@@ -198,9 +211,14 @@ def check_updates():
                     current_state = user_states.get(chat_id, "NONE")
                     
                     if current_state == "WAITING_PHOTO":
+                        file_id = None
                         if "photo" in message:
-                            photo_id = message["photo"][-1]["file_id"]
-                            file_res = requests.get(f"{BASE_URL}/getFile?file_id={photo_id}").json()
+                            file_id = message["photo"][-1]["file_id"]
+                        elif "document" in message:
+                            file_id = message["document"]["file_id"]
+
+                        if file_id:
+                            file_res = requests.get(f"{BASE_URL}/getFile?file_id={file_id}").json()
                             file_path = file_res["result"]["file_path"]
                             photo_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
                             
