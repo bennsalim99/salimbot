@@ -192,7 +192,7 @@ def check_updates():
                     if text == "/start":
                         user_states[chat_id] = "WAITING_PHOTO"
                         user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
-                        send_message(chat_id, "🎬 *Benzero AI Video Botuna Hoş Geldin!*\n\n📸 *1. Adım:* Videoda kullanılacak referans fotoğrafı/fotoğrafları gönder (En fazla 5 adet).")
+                        send_message(chat_id, "🎬 *Benzero AI Video Botuna Hoş Geldin!*\n\n📸 *1. Adım:* Videoda kullanılacak referans fotoğrafı/fotoğrafları gönder (En fazla 5 adet). Tüm fotoğrafları attıktan sonra alttaki **Fotoğraflar Tamam** butonuna tıkla.")
                         continue
                         
                     current_state = user_states.get(chat_id, "NONE")
@@ -204,7 +204,6 @@ def check_updates():
                             file_path = file_res["result"]["file_path"]
                             photo_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
                             
-                            # Eğer kullanıcı oturumu yoksa başlat
                             if chat_id not in user_sessions:
                                 user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
                             
@@ -216,9 +215,7 @@ def check_updates():
                                     [{"text": f"✅ Fotoğraflar Tamam ({adet}/5) ➡️", "callback_data": "photos_done"}]
                                 ]
                             }
-                            send_message(chat_id, f"📸 *{adet}. fotoğraf eklendi.* Başka varsa atabilirsin, bittiyse aşağıdaki butona tıkla:", reply_markup=keyboard)
-                        else:
-                            send_message(chat_id, "⚠️ Lütfen bir fotoğraf gönder veya butona tıkla.")
+                            send_message(chat_id, f"📸 *{adet}. fotoğraf eklendi.* Başka varsa atabilirsin, bittiyse butona tıkla:", reply_markup=keyboard)
 
                     elif current_state == "WAITING_PROMPTS":
                         lines = [line.strip() for line in text.split("\n") if line.strip()]
