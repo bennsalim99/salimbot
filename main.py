@@ -81,6 +81,10 @@ def generate_video(session, prompt_text):
 
     try:
         res = requests.post("https://apihub.agnes-ai.com/v1/videos", json=payload, headers=headers, timeout=20)
+        print("--- AGNES API YANITI ---")
+        print("Status:", res.status_code)
+        print("Body:", res.text)
+        
         data = res.json()
         return data.get("video_id") or data.get("id")
     except Exception as e:
@@ -123,7 +127,7 @@ def process_queue(chat_id, session):
             else:
                 send_message(chat_id, f"❌ *[{index}/{total}]* Video zaman aşımına uğradı.")
         else:
-            send_message(chat_id, f"❌ *[{index}/{total}]* Agnes AI isteği kabul etmedi.")
+            send_message(chat_id, f"❌ *[{index}/{total}]* Agnes AI isteği kabul etmedi. (Render Logs ekranından detaya bakabilirsin)")
             
         if index < total:
             send_message(chat_id, "⏱️ Bir sonraki prompt için 1 dakika bekleniyor...")
@@ -216,7 +220,6 @@ def check_updates():
                         
                     current_state = user_states.get(chat_id, "NONE")
                     
-                    # Eğer kullanıcı hafızada yoksa ama yazı yazdıysa baştan başlatmasını söyleyelim
                     if current_state == "NONE":
                         send_message(chat_id, "⚠️ Oturumunuz zaman aşımına uğradı veya bot yeniden başladı. Lütfen yeniden başlamak için **/start** yazın.")
                         continue
