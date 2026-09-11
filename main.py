@@ -4,7 +4,6 @@ import requests
 from threading import Thread
 from flask import Flask
 
-# Flask ile mini bir web sunucusu açıyoruz ki Render servisi ayakta tutsun
 app = Flask('')
 
 @app.route('/')
@@ -12,9 +11,9 @@ def home():
     return "Bot aktif ve çalışıyor!"
 
 def run_web():
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
 
-# Bilgileriniz
 BOT_TOKEN = "8951343304:AAEEhyKFAPlFhJg9pp6AUsoM1EUnvKZoNNM"
 AGNES_API_KEY = "sk-mzWSliOu65udCf0Wgwr06GK3Koa9cLHTPJnEASpANeEUP79U"
 CHAT_ID = "-1004316545825"
@@ -71,7 +70,10 @@ def poll_agnes(video_id, chat_id):
     for _ in range(60):
         time.sleep(5)
         res = requests.get(f"https://apihub.agnes-ai.com/agnesapi?video_id={video_id}&model_name=agnes-video-2.5-flash", headers=headers)
-        data = res.json()
+        try:
+            data = res.json()
+        except:
+            continue
         
         video_url = data.get("video_url") or data.get("url") or data.get("video")
         if video_url:
@@ -120,8 +122,8 @@ def check_updates():
             time.sleep(5)
 
 if __name__ == "__main__":
-    # Web sunucusunu arka planda (thread) başlat
-    t = Thread(target=run_web)
+    # Telegram dinleyicisini arka planda başlat
+    t = Thread(target=check_updates)
     t.start()
-    # Telegram dinleyicisini ana döngüde çalıştır
-    check_updates()
+    # Flask sunucusunu ana akışta çalıştır (Render bunu ister)
+    run_web()
