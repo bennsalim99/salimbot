@@ -56,10 +56,10 @@ def generate_video(session, prompt_text):
             b64 = "data:image/jpeg;base64," + base64.b64encode(img_data).decode("utf-8")
             images_base64.append(b64)
         except Exception as e:
-            print("Görsel indirme hatası:", e)
+            return None, f"Fotoğraf indirme hatası: {e}"
 
     if not images_base64:
-        return None
+        return None, "Hiçbir fotoğraf indirilemedi."
 
     payload = {
         "model": "agnes-video-2.5-flash",
@@ -81,14 +81,18 @@ def generate_video(session, prompt_text):
 
     try:
         res = requests.post("https://apihub.agnes-ai.com/v1/videos", json=payload, headers=headers, timeout=20)
-        print("=== AGNES API STATUS ===", res.status_code)
-        print("=== AGNES API RESPONSE ===", res.text)
         
+        if res.status_code != 200 and res.status_code != 201:
+            return None, f"HTTP Kod: {res.status_code} - Yanıt: {res.text}"
+            
         data = res.json()
-        return data.get("video_id") or data.get("id")
+        video_id = data.get("video_id") or data.get("id")
+        if not video_id:
+            return None, f"ID dönmedi, yanıt: {res.text}"
+            
+        return video_id, None
     except Exception as e:
-        print("API istek hatası:", e)
-        return None
+        return None, f"Bağlantı/İstek hatası: {str(e)}"
 
 def poll_agnes(video_id):
     headers = {
@@ -115,7 +119,7 @@ def process_queue(chat_id, session):
     for index, prompt_text in enumerate(prompts, 1):
         send_message(chat_id, f"⏳ *[{index}/{total}]* Video üretimi başlatıldı...\nPrompt: _{prompt_text}_")
         
-        video_id = generate_video(session, prompt_text)
+        video_id, error_detail = generate_video(session, prompt_text)
         if video_id:
             send_message(chat_id, f"🎬 Video kuyrukta (ID: `{video_id}`). İşleniyor...")
             video_url = poll_agnes(video_id)
@@ -126,7 +130,7 @@ def process_queue(chat_id, session):
             else:
                 send_message(chat_id, f"❌ *[{index}/{total}]* Video zaman aşımına uğradı.")
         else:
-            send_message(chat_id, f"❌ *[{index}/{total}]* Agnes AI isteği kabul etmedi. (Render Logs ekranında hata kodu yazıyor)")
+            send_message(chat_id, f"❌ *[{index}/{total}]* Agnes AI reddetti!\n*Sebep:* `{error_detail}`")
             
         if index < total:
             send_message(chat_id, "⏱️ Bir sonraki prompt için 1 dakika bekleniyor...")
