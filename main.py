@@ -197,7 +197,7 @@ def check_updates():
                     chat_id = message.get("chat", {}).get("id")
                     text = message.get("text", "").strip()
                     
-                    if text == "/start":
+                    if text.startswith("/start"):
                         user_states[chat_id] = "WAITING_PHOTO"
                         user_sessions[chat_id] = {"photos": [], "prompts": [], "seconds": "8", "aspect": "9:16"}
                         
@@ -241,7 +241,7 @@ def check_updates():
                             user_sessions[chat_id]["prompts"] = lines
                             user_states[chat_id] = "WAITING_SECONDS"
                             keyboard = {
-                                "inline_keyboard": [
+                                "inline_keyword": [
                                     [{"text": "4 sn", "callback_data": "sec_4"}, {"text": "5 sn", "callback_data": "sec_5"}, {"text": "8 sn", "callback_data": "sec_8"}],
                                     [{"text": "10 sn", "callback_data": "sec_10"}, {"text": "12 sn", "callback_data": "sec_12"}, {"text": "18 sn", "callback_data": "sec_18"}]
                                 ]
