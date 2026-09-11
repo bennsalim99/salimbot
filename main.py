@@ -205,7 +205,7 @@ def check_updates():
                     if text == "/start":
                         user_states[chat_id] = "WAITING_PHOTO"
                         user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
-                        send_message(chat_id, "🎬 *Benzero AI Video Botuna Hoş Geldin!*\n\n📸 *1. Adım:* Videoda kullanılacak referans fotoğrafı/fotoğrafları gönder (En fazla 5 adet). Tüm fotoğrafları attıktan sonra alttaki **Fotoğraflar Tamam** butonuna tıkla.")
+                        send_message(chat_id, "🎬 *Benzero AI Video Botuna Hoş Geldin!*\n\n📸 *1. Adım:* Referans fotoğraflarını toplu veya tek tek gönder (En fazla 5 adet). Tüm fotoğrafları gönderdikten sonra alttaki **Fotoğraflar Tamam** butonuna tıkla.")
                         continue
                         
                     current_state = user_states.get(chat_id, "NONE")
@@ -225,15 +225,18 @@ def check_updates():
                             if chat_id not in user_sessions:
                                 user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
                             
-                            user_sessions[chat_id]["photos"].append(photo_url)
-                            adet = len(user_sessions[chat_id]["photos"])
-                            
-                            keyboard = {
-                                "inline_keyboard": [
-                                    [{"text": f"✅ Fotoğraflar Tamam ({adet}/5) ➡️", "callback_data": "photos_done"}]
-                                ]
-                            }
-                            send_message(chat_id, f"📸 *{adet}. fotoğraf eklendi.* Başka varsa atabilirsin, bittiyse butona tıkla:", reply_markup=keyboard)
+                            # Eğer bu fotoğraf zaten eklenmediyse ekle
+                            if photo_url not in user_sessions[chat_id]["photos"]:
+                                user_sessions[chat_id]["photos"].append(photo_url)
+                                adet = len(user_sessions[chat_id]["photos"])
+                                
+                                # Toplu atıldığında her fotoğrafa ayrı mesaj atmaması için sadece son fotoğrafta buton gönderelim veya tek seferde güncelleyelim
+                                keyboard = {
+                                    "inline_keyboard": [
+                                        [{"text": f"✅ Fotoğraflar Tamam ({adet}/5) ➡️", "callback_data": "photos_done"}]
+                                    ]
+                                }
+                                send_message(chat_id, f"📸 Toplam *{adet}* fotoğraf hafızaya alındı. Başka varsa atabilirsin, bittiyse butona tıkla:", reply_markup=keyboard)
 
                     elif current_state == "WAITING_PROMPTS":
                         lines = [line.strip() for line in text.split("\n") if line.strip()]
