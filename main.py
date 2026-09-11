@@ -130,13 +130,11 @@ def check_updates():
                 for result in data.get("result", []):
                     offset = result["update_id"] + 1
                     
-                    # 1. Buton Tıklamaları
                     if "callback_query" in result:
                         cq = result["callback_query"]
                         chat_id = cq["message"]["chat"]["id"]
                         data_val = cq["data"]
                         
-                        # Fotoğraf bitti butonu
                         if data_val == "photos_done":
                             if chat_id in user_sessions and len(user_sessions[chat_id]["photos"]) > 0:
                                 user_states[chat_id] = "WAITING_PROMPTS"
@@ -144,7 +142,6 @@ def check_updates():
                             else:
                                 send_message(chat_id, "⚠️ Lütfen önce en az 1 adet fotoğraf gönder.")
                         
-                        # Negative prompt geç butonu
                         elif data_val == "skip_neg":
                             if chat_id in user_sessions:
                                 user_sessions[chat_id]["neg_prompt"] = ""
@@ -157,7 +154,6 @@ def check_updates():
                                 }
                                 send_message(chat_id, "⏱️ *4. Adım:* Video süresini seç:", reply_markup=keyboard)
 
-                        # Süre seçimi
                         elif data_val.startswith("sec_"):
                             sec = data_val.replace("sec_", "")
                             if chat_id in user_sessions:
@@ -171,7 +167,6 @@ def check_updates():
                                 }
                                 send_message(chat_id, f"✅ Süre: *{sec} saniye*\n\n📐 *5. Adım:* En / Boy oranını seç:", reply_markup=keyboard)
 
-                        # En boy seçimi ve başlatma
                         elif data_val.startswith("asp_"):
                             asp = data_val.replace("asp_", "")
                             if chat_id in user_sessions:
@@ -187,7 +182,6 @@ def check_updates():
                                 user_sessions.pop(chat_id, None)
                         continue
 
-                    # 2. Normal Mesajlar
                     message = result.get("message", {})
                     if not message:
                         continue
@@ -203,13 +197,16 @@ def check_updates():
                         
                     current_state = user_states.get(chat_id, "NONE")
                     
-                    # Fotoğraf alma adımı
                     if current_state == "WAITING_PHOTO":
                         if "photo" in message:
                             photo_id = message["photo"][-1]["file_id"]
                             file_res = requests.get(f"{BASE_URL}/getFile?file_id={photo_id}").json()
                             file_path = file_res["result"]["file_path"]
                             photo_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+                            
+                            # Eğer kullanıcı oturumu yoksa başlat
+                            if chat_id not in user_sessions:
+                                user_sessions[chat_id] = {"photos": [], "prompts": [], "neg_prompt": "", "seconds": "8", "aspect": "9:16"}
                             
                             user_sessions[chat_id]["photos"].append(photo_url)
                             adet = len(user_sessions[chat_id]["photos"])
@@ -219,11 +216,10 @@ def check_updates():
                                     [{"text": f"✅ Fotoğraflar Tamam ({adet}/5) ➡️", "callback_data": "photos_done"}]
                                 ]
                             }
-                            send_message(chat_id, f"📸 *{adet}. fotoğraf alındı.* Başka varsa atabilirsin, bittiyse butona tıkla:", reply_markup=keyboard)
+                            send_message(chat_id, f"📸 *{adet}. fotoğraf eklendi.* Başka varsa atabilirsin, bittiyse aşağıdaki butona tıkla:", reply_markup=keyboard)
                         else:
-                            send_message(chat_id, "⚠️ Lütfen önce bir fotoğraf gönder.")
+                            send_message(chat_id, "⚠️ Lütfen bir fotoğraf gönder veya butona tıkla.")
 
-                    # Prompt alma adımı
                     elif current_state == "WAITING_PROMPTS":
                         lines = [line.strip() for line in text.split("\n") if line.strip()]
                         if lines:
@@ -238,7 +234,6 @@ def check_updates():
                         else:
                             send_message(chat_id, "⚠️ Lütfen en az bir prompt yaz.")
 
-                    # Negative prompt alma adımı
                     elif current_state == "WAITING_NEG_PROMPT":
                         user_sessions[chat_id]["neg_prompt"] = text
                         user_states[chat_id] = "WAITING_SECONDS"
