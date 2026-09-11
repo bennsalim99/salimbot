@@ -97,15 +97,22 @@ def poll_agnes(video_id):
         "Accept": "application/json"
     }
     
-    for _ in range(60):
-        time.sleep(5)
+    # 120 deneme * 10 saniye = 20 dakikalık maksimum bekleme süresi (uzun render'lar için)
+    for _ in range(120):
+        time.sleep(10)
         try:
             res = requests.get(f"https://apihub.agnes-ai.com/agnesapi?video_id={video_id}&model_name=agnes-video-2.5-flash", headers=headers, timeout=15)
             data = res.json()
+            
+            status = data.get("status")
+            if status in ["failed", "error", "cancelled"]:
+                return None
+                
             video_url = data.get("video_url") or data.get("url") or data.get("video")
             if video_url:
                 return video_url
-        except:
+        except Exception as e:
+            print("Poll hatası:", e)
             continue
     return None
 
@@ -158,7 +165,7 @@ def check_updates():
                         if data_val == "photos_done":
                             if len(user_sessions[chat_id]["photos"]) > 0:
                                 user_states[chat_id] = "WAITING_PROMPTS"
-                                send_message(chat_id, "✍️ *2. Adım:* Üretilmesini istediğin detaylı promptu yaz:")
+                                send_message(chat_id, "✍️ *2. Adım:* Üretilmesini istediğin detaylı promptu tek seferde yaz:")
                             else:
                                 send_message(chat_id, "⚠️ Lütfen önce en az 1 adet fotoğraf gönder.")
                         
@@ -243,7 +250,7 @@ def check_updates():
                                     [{"text": "10 sn", "callback_data": "sec_10"}, {"text": "12 sn", "callback_data": "sec_12"}, {"text": "18 sn", "callback_data": "sec_18"}]
                                 ]
                             }
-                            send_message(chat_id, f"✅ *Prompt başarıyla kaydedildi.*\n\n⏱️ *3. Adım:* Video süresini seç:", reply_markup=keyboard)
+                            send_message(chat_id, f"✅ *Prompt tek parça halinde kaydedildi.*\n\n⏱️ *3. Adım:* Video süresini seç:", reply_markup=keyboard)
                         else:
                             send_message(chat_id, "⚠️ Lütfen geçerli bir prompt yaz.")
 
