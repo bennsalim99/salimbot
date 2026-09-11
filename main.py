@@ -8,7 +8,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot aktif and calisiyor!"
+    return "Bot aktif ve calisiyor!"
 
 def run_web():
     port = int(os.environ.get('PORT', 10000))
